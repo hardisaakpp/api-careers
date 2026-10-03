@@ -1,0 +1,79 @@
+using Careers.Domain.Applications;
+using Careers.Domain.Cv;
+using Careers.Domain.Offers;
+
+namespace Careers.Application;
+
+public interface ICvRepository
+{
+    Task<CvDocument?> GetAsync(Guid userId, CancellationToken ct);
+
+    Task SaveAsync(Guid userId, CvDocument cv, CancellationToken ct);
+}
+
+public interface IPreferencesRepository
+{
+    Task<SearchPreferences?> GetAsync(Guid userId, CancellationToken ct);
+
+    Task SaveAsync(Guid userId, SearchPreferences preferences, CancellationToken ct);
+}
+
+public interface IOfferRepository
+{
+    /// <summary>
+    /// Stores what is new. A vacancy already stored (same source and id) is left alone; one already published by another
+    /// source only gains that source in <see cref="JobOffer.AlsoOn"/>. Returns how many offers were added.
+    /// </summary>
+    Task<int> AddNewAsync(IReadOnlyList<JobOffer> offers, CancellationToken ct);
+
+    Task<IReadOnlyList<JobOffer>> RecentAsync(int max, CancellationToken ct);
+
+    Task<JobOffer?> GetAsync(Guid id, CancellationToken ct);
+
+    Task<IReadOnlyDictionary<Guid, JobOffer>> GetManyAsync(IReadOnlyCollection<Guid> ids, CancellationToken ct);
+}
+
+public interface IApplicationRepository
+{
+    Task AddAsync(JobApplication application, CancellationToken ct);
+
+    Task<JobApplication?> GetAsync(Guid userId, Guid id, CancellationToken ct);
+
+    Task<JobApplication?> FindForOfferAsync(Guid userId, Guid offerId, CancellationToken ct);
+
+    Task<IReadOnlyList<JobApplication>> ListAsync(Guid userId, CancellationToken ct);
+
+    Task SaveAsync(CancellationToken ct);
+}
+
+public interface IFeedPollStore
+{
+    Task<DateTimeOffset?> LastAsync(string source, CancellationToken ct);
+
+    Task MarkAsync(string source, DateTimeOffset at, CancellationToken ct);
+}
+
+/// <summary>A public source of offers whose terms allow consuming it.</summary>
+public interface IOfferFeed
+{
+    string Source { get; }
+
+    Task<IReadOnlyList<JobOffer>> FetchAsync(DateTimeOffset now, CancellationToken ct);
+}
+
+public sealed record RankedOffer(Guid OfferId, double Score, string? ExcludedReason, IReadOnlyList<string> Matches);
+
+/// <param name="Pending">Offers whose affinity is still being computed; ask again later.</param>
+public sealed record RankResult(int Pending, IReadOnlyList<RankedOffer> Offers);
+
+/// <summary>The stateless AI service: it receives everything it needs and keeps nothing of the person's.</summary>
+public interface ICareersAi
+{
+    Task<RankResult> RankAsync(CvDocument cv, SearchPreferences preferences, IReadOnlyList<JobOffer> offers, CancellationToken ct);
+
+    Task<CvDocument> AdaptAsync(CvDocument cv, JobOffer offer, CancellationToken ct);
+
+    Task<string> LetterAsync(CvDocument cv, JobOffer offer, CancellationToken ct);
+
+    Task<byte[]> RenderPdfAsync(CvDocument cv, CancellationToken ct);
+}

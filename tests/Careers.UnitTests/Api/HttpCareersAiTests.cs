@@ -1,0 +1,85 @@
+using System.Net;
+using System.Text;
+using System.Text.Json;
+using Careers.Application;
+using Careers.Domain.Offers;
+using Careers.Infrastructure.Ai;
+using Microsoft.Extensions.Logging.Abstractions;
+
+namespace Careers.UnitTests.Api;
+
+public class HttpCareersAiTests
+{
+    private sealed class Handler(Func<HttpRequestMessage, HttpResponseMessage> respond) : HttpMessageHandler
+    {
+        public List<(HttpRequestMessage Request, string Body)> Calls { get; } = [];
+
+        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
+        {
+            Calls.Add((request, request.Content is null ? string.Empty : await request.Content.ReadAsStringAsync(ct)));
+            return respond(request);
+        }
+    }
+
+    private static HttpCareersAi Client(Handler handler) => new(
+        new HttpClient(handler) { BaseAddress = new Uri("http://ai.test/") }, NullLogger<HttpCareersAi>.Instance);
+
+    private static JobOffer Offer() => JobOffer.Create(
+        "a", "1", "https://x", "Backend", "Acme", "Worldwide", ["dotnet"], new string('d', 20000), null, DateTimeOffset.UtcNow);
+
+    private static HttpResponseMessage Json(string body) =>
+        new(HttpStatusCode.OK) { Content = new StringContent(body, Encoding.UTF8, "application/json") };
+
+    [Fact]
+    public async Task Rank_speaks_the_ai_contract_and_trims_oversized_offers()
+    {
+        var offer = Offer();
+        var handler = new Handler(_ => Json($$"""{"pendientes":2,"resultados":[{"id":"{{offer.Id}}","puntaje":88.5,"excluida":null,"coinciden":[".NET"]},{"id":"not-a-guid","puntaje":1,"excluida":null,"coinciden":[]}]}"""));
+
+        var result = await Client(handler).RankAsync(Careers.UnitTests.Api.CareersApiFactory.SampleCv(), Careers.Domain.Cv.SearchPreferences.None, [offer], default);
+
+        Assert.Equal(2, result.Pending);
+        var ranked = Assert.Single(result.Offers); // an id this system did not issue is ignored
+        Assert.Equal(offer.Id, ranked.OfferId);
+        Assert.Equal(88.5, ranked.Score);
+        using var sent = JsonDocument.Parse(handler.Calls[0].Body);
+        Assert.Equal("Ana Example", sent.RootElement.GetProperty("cv").GetProperty("nombre").GetString());
+        Assert.Equal(12000, sent.RootElement.GetProperty("ofertas")[0].GetProperty("descripcion").GetString()!.Length);
+        Assert.EndsWith("v1/rank", handler.Calls[0].Request.RequestUri!.AbsolutePath);
+    }
+
+    [Fact]
+    public async Task Adapt_brings_the_cv_back_in_this_systems_shape()
+    {
+        var handler = new Handler(_ => Json("""
+        {"cv":{"nombre":"Ana","titular":"T","resumen":"R","contacto":{"email":"a@b.co","telefono":null,"ubicacion":null,"enlaces":{}},
+         "experiencia":[{"cargo":"Dev","organizacion":"Acme","desde":"2022","hasta":null,"logros":["x"],"tecnologias":[".NET"]}],
+         "proyectos":[],"educacion":[],"habilidades":[{"nombre":"Destacadas","items":[".NET"]}]},"cambiado":true}
+        """));
+
+        var cv = await Client(handler).AdaptAsync(CareersApiFactory.SampleCv(), Offer(), default);
+
+        Assert.Equal("Dev", cv.Experience[0].Role);
+        Assert.Equal("Destacadas", cv.Skills[0].Name);
+    }
+
+    [Theory]
+    [InlineData(HttpStatusCode.InternalServerError)]
+    [InlineData(HttpStatusCode.Unauthorized)]
+    [InlineData(HttpStatusCode.UnprocessableEntity)]
+    public async Task Any_failure_from_the_ai_becomes_one_clear_error(HttpStatusCode status)
+    {
+        var handler = new Handler(_ => new HttpResponseMessage(status));
+
+        await Assert.ThrowsAsync<AiUnavailableException>(() => Client(handler).RenderPdfAsync(CareersApiFactory.SampleCv(), default));
+    }
+
+    [Fact]
+    public async Task An_unreachable_or_garbled_ai_becomes_the_same_error()
+    {
+        await Assert.ThrowsAsync<AiUnavailableException>(() =>
+            Client(new Handler(_ => throw new HttpRequestException("refused"))).LetterAsync(CareersApiFactory.SampleCv(), Offer(), default));
+        await Assert.ThrowsAsync<AiUnavailableException>(() =>
+            Client(new Handler(_ => Json("not json"))).LetterAsync(CareersApiFactory.SampleCv(), Offer(), default));
+    }
+}
