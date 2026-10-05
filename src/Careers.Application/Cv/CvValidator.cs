@@ -153,6 +153,15 @@ public static partial class CvValidator
             Text($"languages[{i}].level", cv.Languages[i].Level, 40);
         }
 
+        Count("references", cv.References.Count, 10);
+        for (var i = 0; i < cv.References.Count; i++)
+        {
+            var r = cv.References[i];
+            Text($"references[{i}].name", r.Name, 120);
+            Text($"references[{i}].role", r.Role, 150);
+            Text($"references[{i}].contact", r.Contact, 120);
+        }
+
         if (cv.Hidden.Any(key => !CvDocument.HiddenKeys.Contains(key)))
         {
             Add("hidden", "unknown-key");

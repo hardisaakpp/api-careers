@@ -1,4 +1,5 @@
 using Careers.Api.Auth;
+using Careers.Application;
 using Careers.Application.Cv;
 using Careers.Domain.Cv;
 
@@ -34,6 +35,13 @@ public static class CvEndpoints
             return Results.File(await cvs.RenderAsync(http.User.UserId(), draft, ct), "application/pdf");
         }).RequireRateLimiting(HeavyPolicy);
 
+        // Reads an existing CV (PDF, DOCX or a LinkedIn data export) into a draft. The file travels raw in the body.
+        app.MapPost("/cv/import", async (HttpContext http, CvService cvs, CancellationToken ct) =>
+        {
+            var imported = await cvs.ImportAsync(await ReadFileAsync(http.Request, ct), ct);
+            return Results.Ok(new { cv = imported.Cv, source = imported.Source, warnings = imported.Warnings });
+        }).RequireRateLimiting(HeavyPolicy);
+
         app.MapGet("/preferences", async (HttpContext http, CvService cvs, CancellationToken ct) =>
             Results.Ok(await cvs.GetPreferencesAsync(http.User.UserId(), ct)));
 
@@ -42,5 +50,31 @@ public static class CvEndpoints
             await cvs.SavePreferencesAsync(http.User.UserId(), preferences, ct);
             return Results.NoContent();
         });
+    }
+
+    public const int MaxImportBytes = 5 * 1024 * 1024;
+
+    /// <summary>The raw body, refused as soon as it is over the limit (the header first, then while reading: a chunked body has no header).</summary>
+    private static async Task<byte[]> ReadFileAsync(HttpRequest request, CancellationToken ct)
+    {
+        if (request.ContentLength > MaxImportBytes)
+        {
+            throw new ImportFailedException("demasiado-grande");
+        }
+
+        using var buffer = new MemoryStream();
+        var chunk = new byte[81920];
+        int read;
+        while ((read = await request.Body.ReadAsync(chunk, ct)) > 0)
+        {
+            if (buffer.Length + read > MaxImportBytes)
+            {
+                throw new ImportFailedException("demasiado-grande");
+            }
+
+            buffer.Write(chunk, 0, read);
+        }
+
+        return buffer.Length == 0 ? throw new ImportFailedException("vacio") : buffer.ToArray();
     }
 }

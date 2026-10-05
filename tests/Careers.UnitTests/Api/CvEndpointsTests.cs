@@ -236,4 +236,123 @@ public class CvEndpointsTests : IClassFixture<CareersApiFactory>
 
         Assert.Equal(HttpStatusCode.UnprocessableEntity, (await client.PutAsJsonAsync("/preferences", tooMany)).StatusCode);
     }
+
+    private static ByteArrayContent File(byte[] bytes) =>
+        new(bytes) { Headers = { ContentType = new("application/octet-stream") } };
+
+    [Fact]
+    public async Task Importing_a_file_returns_a_draft_and_stores_nothing()
+    {
+        var client = _factory.ClientFor(Guid.NewGuid());
+        _factory.Ai.ImportFailure = null;
+        _factory.Ai.NextImport = new Careers.Application.CvImport(
+            CareersApiFactory.SampleCv("Imported Ana"), "linkedin", ["linkedin-sin-logros"]);
+
+        var response = await client.PostAsync("/cv/import", File("%PDF-1.4 bytes"u8.ToArray()));
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await CareersApiFactory.Json(response);
+        Assert.Equal("linkedin", body.GetProperty("source").GetString());
+        Assert.Equal("Imported Ana", body.GetProperty("cv").GetProperty("fullName").GetString());
+        Assert.Equal("linkedin-sin-logros", body.GetProperty("warnings")[0].GetString());
+        Assert.False((await CareersApiFactory.Json(await client.GetAsync("/cv"))).GetProperty("saved").GetBoolean());
+        Assert.Equal("%PDF-1.4 bytes", System.Text.Encoding.UTF8.GetString(_factory.Ai.LastImported!));
+    }
+
+    [Fact]
+    public async Task An_imported_draft_always_fits_the_limits_so_it_can_be_saved_as_reviewed()
+    {
+        var client = _factory.ClientFor(Guid.NewGuid());
+        _factory.Ai.ImportFailure = null;
+        var wild = CareersApiFactory.SampleCv(new string('N', 500)) with
+        {
+            Summary = new string('s', 5000),
+            Contact = new CvContact("not-an-email", new Dictionary<string, string> { ["ok"] = "https://ok.example", ["bad"] = "ftp://x" }, new string('9', 99)),
+            Languages = [.. Enumerable.Range(0, 40).Select(i => new CvLanguage($"L{i}"))],
+            Hidden = ["resumen", "not-a-section"],
+        };
+        _factory.Ai.NextImport = new Careers.Application.CvImport(wild, "pdf", []);
+
+        var draft = await CareersApiFactory.Json(await client.PostAsync("/cv/import", File([1])));
+        var cv = draft.GetProperty("cv");
+
+        Assert.Equal(120, cv.GetProperty("fullName").GetString()!.Length);
+        Assert.Equal(2000, cv.GetProperty("summary").GetString()!.Length);
+        Assert.Equal(string.Empty, cv.GetProperty("contact").GetProperty("email").GetString());
+        Assert.True(cv.GetProperty("contact").GetProperty("links").TryGetProperty("ok", out _));
+        Assert.False(cv.GetProperty("contact").GetProperty("links").TryGetProperty("bad", out _));
+        Assert.Equal(15, cv.GetProperty("languages").GetArrayLength());
+        Assert.Equal(1, cv.GetProperty("hidden").GetArrayLength());
+        // What the person reviews can be saved exactly as it came.
+        Assert.Equal(HttpStatusCode.NoContent, (await client.PutAsJsonAsync("/cv", cv)).StatusCode);
+    }
+
+    [Theory]
+    [InlineData("sin-texto", HttpStatusCode.UnprocessableEntity)]
+    [InlineData("formato-desconocido", HttpStatusCode.UnprocessableEntity)]
+    [InlineData("demasiado-grande", HttpStatusCode.RequestEntityTooLarge)]
+    public async Task A_file_that_cannot_be_read_says_why_with_a_stable_code(string reason, HttpStatusCode status)
+    {
+        _factory.Ai.ImportFailure = reason;
+        try
+        {
+            var response = await _factory.ClientFor(Guid.NewGuid()).PostAsync("/cv/import", File([1, 2, 3]));
+
+            Assert.Equal(status, response.StatusCode);
+            Assert.Equal($"import-{reason}", (await CareersApiFactory.Json(response)).GetProperty("code").GetString());
+        }
+        finally
+        {
+            _factory.Ai.ImportFailure = null;
+        }
+    }
+
+    [Fact]
+    public async Task An_empty_or_oversized_upload_is_refused_before_reaching_the_ai()
+    {
+        var client = _factory.ClientFor(Guid.NewGuid());
+        _factory.Ai.ImportFailure = null;
+
+        var empty = await client.PostAsync("/cv/import", File([]));
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, empty.StatusCode);
+        Assert.Equal("import-vacio", (await CareersApiFactory.Json(empty)).GetProperty("code").GetString());
+
+        var calls = _factory.Ai.LastImported;
+        var big = await client.PostAsync("/cv/import", File(new byte[Careers.Api.Endpoints.CvEndpoints.MaxImportBytes + 1]));
+        Assert.Equal(HttpStatusCode.RequestEntityTooLarge, big.StatusCode);
+        Assert.Same(calls, _factory.Ai.LastImported);
+    }
+
+    [Fact]
+    public async Task Importing_needs_a_signed_in_person_and_a_working_ai_service()
+    {
+        Assert.Equal(HttpStatusCode.Unauthorized, (await _factory.ClientFor().PostAsync("/cv/import", File([1]))).StatusCode);
+
+        _factory.Ai.Down = true;
+        try
+        {
+            Assert.Equal(HttpStatusCode.ServiceUnavailable, (await _factory.ClientFor(Guid.NewGuid()).PostAsync("/cv/import", File([1]))).StatusCode);
+        }
+        finally
+        {
+            _factory.Ai.Down = false;
+        }
+    }
+
+    [Fact]
+    public async Task References_are_stored_and_can_be_switched_out_of_the_pdf()
+    {
+        var client = _factory.ClientFor(Guid.NewGuid());
+        var cv = CareersApiFactory.SampleCv("Ana") with
+        {
+            References = [new CvReference("Luis Perez", "Lead", "099")],
+            Hidden = ["referencias"],
+        };
+
+        Assert.Equal(HttpStatusCode.NoContent, (await client.PutAsJsonAsync("/cv", cv)).StatusCode);
+
+        var back = (await CareersApiFactory.Json(await client.GetAsync("/cv"))).GetProperty("cv");
+        Assert.Equal("Luis Perez", back.GetProperty("references")[0].GetProperty("name").GetString());
+        Assert.Equal("referencias", back.GetProperty("hidden")[0].GetString());
+    }
 }

@@ -50,6 +50,49 @@ public class HttpCareersAiTests
     }
 
     [Fact]
+    public async Task Import_sends_the_raw_file_and_brings_the_draft_back_in_this_systems_shape()
+    {
+        var handler = new Handler(_ => Json("""
+        {"cv":{"nombre":"Ana","titular":"T","resumen":"R","contacto":{"email":"a@b.co","telefono":null,"ubicacion":null,"enlaces":{}},
+         "experiencia":[],"proyectos":[],"educacion":[],"habilidades":[],
+         "referencias":[{"nombre":"Luis","cargo":"Lead","contacto":"099","incluir":true}],"ocultas":["referencias"]},
+         "origen":"pdf","avisos":["no-verificado:2"]}
+        """));
+
+        var result = await Client(handler).ImportAsync([1, 2, 3], default);
+
+        Assert.Equal("pdf", result.Source);
+        Assert.Equal("Ana", result.Cv.FullName);
+        Assert.Equal("Luis", result.Cv.References[0].Name);
+        Assert.Equal(["referencias"], result.Cv.Hidden);
+        Assert.Equal(["no-verificado:2"], result.Warnings);
+        Assert.EndsWith("v1/import", handler.Calls[0].Request.RequestUri!.AbsolutePath);
+        Assert.Equal("application/octet-stream", handler.Calls[0].Request.Content!.Headers.ContentType!.MediaType);
+    }
+
+    [Theory]
+    [InlineData(HttpStatusCode.UnprocessableEntity, """{"detail":"sin-texto"}""", "sin-texto")]
+    [InlineData(HttpStatusCode.RequestEntityTooLarge, """{"detail":"demasiado-grande"}""", "demasiado-grande")]
+    [InlineData(HttpStatusCode.UnprocessableEntity, """{"detail":"<script>alert(1)</script>"}""", "ilegible")] // only a short slug is trusted
+    [InlineData(HttpStatusCode.UnprocessableEntity, "not json", "ilegible")]
+    public async Task A_file_careers_ai_rejects_becomes_a_reason_not_a_service_failure(HttpStatusCode status, string body, string reason)
+    {
+        var handler = new Handler(_ => new HttpResponseMessage(status) { Content = new StringContent(body, Encoding.UTF8, "application/json") });
+
+        var failure = await Assert.ThrowsAsync<ImportFailedException>(() => Client(handler).ImportAsync([1], default));
+
+        Assert.Equal(reason, failure.Reason);
+    }
+
+    [Fact]
+    public async Task A_server_error_while_importing_is_the_service_being_unavailable()
+    {
+        var handler = new Handler(_ => new HttpResponseMessage(HttpStatusCode.InternalServerError));
+
+        await Assert.ThrowsAsync<AiUnavailableException>(() => Client(handler).ImportAsync([1], default));
+    }
+
+    [Fact]
     public async Task Rank_speaks_the_ai_contract_and_trims_oversized_offers()
     {
         var offer = Offer();

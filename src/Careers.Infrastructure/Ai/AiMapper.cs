@@ -15,7 +15,8 @@ internal static class AiMapper
         cv.Research.Select(ToAi).ToList(),
         cv.Certifications.Select(c => new AiCertification(c.Name, c.Issuer, c.Year, c.Include)).ToList(),
         cv.Languages.Select(l => new AiLanguage(l.Name, l.Level, l.Include)).ToList(),
-        cv.Hidden);
+        cv.Hidden,
+        cv.References.Select(r => new AiReference(r.Name, r.Role, r.Contact, r.Include)).ToList());
 
     private static AiExperience ToAi(CvExperience e) =>
         new(e.Role, e.Organization, e.From, e.To, e.Achievements, e.Technologies, e.Location, e.Include);
@@ -33,7 +34,8 @@ internal static class AiMapper
         cv.Research?.Select(FromAi).ToList(),
         cv.Certifications?.Select(c => new CvCertification(c.Name, c.Issuer, c.Year, c.Include)).ToList(),
         cv.Languages?.Select(l => new CvLanguage(l.Name, l.Level, l.Include)).ToList(),
-        cv.Hidden);
+        cv.Hidden,
+        cv.References?.Select(r => new CvReference(r.Name, r.Role, r.Contact, r.Include)).ToList());
 
     public static AiPreferences ToAi(SearchPreferences p) =>
         new(p.ExcludeTitles, p.ExcludeText, p.Locations, p.RequiredTechnologies);

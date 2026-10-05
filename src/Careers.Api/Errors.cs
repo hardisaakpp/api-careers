@@ -14,6 +14,8 @@ public sealed class CareersExceptionHandler(IProblemDetailsService problems, ILo
             NotFoundException => (StatusCodes.Status404NotFound, "Not found"),
             ConflictException => (StatusCodes.Status409Conflict, "Conflict"),
             ValidationFailedException => (StatusCodes.Status422UnprocessableEntity, "Validation failed"),
+            ImportFailedException { TooLarge: true } => (StatusCodes.Status413PayloadTooLarge, "The file is too large"),
+            ImportFailedException => (StatusCodes.Status422UnprocessableEntity, "The file could not be imported"),
             AiUnavailableException => (StatusCodes.Status503ServiceUnavailable, "The AI service is unavailable"),
             UnauthorizedAccessException => (StatusCodes.Status401Unauthorized, "Unauthorized"),
             BadHttpRequestException => (StatusCodes.Status400BadRequest, "Bad request"),

@@ -22,6 +22,14 @@ public sealed class FakeAi : ICareersAi
     public CvDocument? LastRendered { get; private set; }
     public SearchPreferences? LastPreferences { get; private set; }
 
+    /// <summary>What <see cref="ImportAsync"/> returns; null reads the file as a tiny draft named after its first line.</summary>
+    public CvImport? NextImport { get; set; }
+
+    /// <summary>A reason (e.g. sin-texto) makes the next import fail the way careers-ai does for an unusable file.</summary>
+    public string? ImportFailure { get; set; }
+
+    public byte[]? LastImported { get; private set; }
+
     private void Check()
     {
         if (Down)
@@ -53,6 +61,18 @@ public sealed class FakeAi : ICareersAi
     {
         Check();
         return Task.FromResult($"Dear {offer.Company}: I am interested in {offer.Title}.");
+    }
+
+    public Task<CvImport> ImportAsync(byte[] file, CancellationToken ct)
+    {
+        Check();
+        LastImported = file;
+        if (ImportFailure is not null)
+        {
+            throw new ImportFailedException(ImportFailure);
+        }
+
+        return Task.FromResult(NextImport ?? new CvImport(CvDocument.Empty with { FullName = "Imported" }, "pdf", []));
     }
 
     public Task<byte[]> RenderPdfAsync(CvDocument cv, CancellationToken ct)

@@ -24,6 +24,13 @@ public sealed class CvService(ICvRepository cvs, IPreferencesRepository preferen
         return await ai.RenderPdfAsync(cv, ct);
     }
 
+    /// <summary>Reads an existing CV file into a draft for the form. Nothing is stored: the person reviews it and saves.</summary>
+    public async Task<CvImport> ImportAsync(byte[] file, CancellationToken ct)
+    {
+        var imported = await ai.ImportAsync(file, ct);
+        return imported with { Cv = CvDraftCleaner.Clean(imported.Cv) };
+    }
+
     public async Task<SearchPreferences> GetPreferencesAsync(Guid userId, CancellationToken ct) =>
         await preferences.GetAsync(userId, ct) ?? SearchPreferences.None;
 

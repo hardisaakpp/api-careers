@@ -76,4 +76,10 @@ public interface ICareersAi
     Task<string> LetterAsync(CvDocument cv, JobOffer offer, CancellationToken ct);
 
     Task<byte[]> RenderPdfAsync(CvDocument cv, CancellationToken ct);
+
+    /// <summary>Reads an existing CV (PDF, DOCX or a LinkedIn data export) into a draft. Nothing is stored.</summary>
+    Task<CvImport> ImportAsync(byte[] file, CancellationToken ct);
 }
+
+/// <summary>A draft read from a file: <see cref="Source"/> is pdf, docx or linkedin; <see cref="Warnings"/> are stable codes the interface words.</summary>
+public sealed record CvImport(CvDocument Cv, string Source, IReadOnlyList<string> Warnings);

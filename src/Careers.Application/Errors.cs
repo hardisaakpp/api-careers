@@ -22,3 +22,12 @@ public sealed class AiUnavailableException(string message, Exception? inner = nu
 {
     public override string ToString() => inner is null ? base.ToString() : $"{base.ToString()} ---> {inner}";
 }
+
+/// <summary>The uploaded file could not be turned into a CV. The code says why (e.g. <c>import-sin-texto</c> for a scanned PDF).</summary>
+public sealed class ImportFailedException(string reason)
+    : CareersException($"import-{reason}", "The file could not be imported.")
+{
+    public bool TooLarge => Reason == "demasiado-grande";
+
+    public string Reason { get; } = reason;
+}

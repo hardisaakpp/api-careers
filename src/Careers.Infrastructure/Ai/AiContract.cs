@@ -46,6 +46,12 @@ internal sealed record AiLanguage(
     [property: JsonPropertyName("nivel")] string Level,
     [property: JsonPropertyName("incluir")] bool Include = true);
 
+internal sealed record AiReference(
+    [property: JsonPropertyName("nombre")] string Name,
+    [property: JsonPropertyName("cargo")] string Role = "",
+    [property: JsonPropertyName("contacto")] string Contact = "",
+    [property: JsonPropertyName("incluir")] bool Include = true);
+
 internal sealed record AiSkillGroup(
     [property: JsonPropertyName("nombre")] string Name,
     [property: JsonPropertyName("items")] IReadOnlyList<string> Items);
@@ -62,7 +68,8 @@ internal sealed record AiCv(
     [property: JsonPropertyName("investigacion")] IReadOnlyList<AiExperience>? Research = null,
     [property: JsonPropertyName("certificaciones")] IReadOnlyList<AiCertification>? Certifications = null,
     [property: JsonPropertyName("idiomas")] IReadOnlyList<AiLanguage>? Languages = null,
-    [property: JsonPropertyName("ocultas")] IReadOnlyList<string>? Hidden = null);
+    [property: JsonPropertyName("ocultas")] IReadOnlyList<string>? Hidden = null,
+    [property: JsonPropertyName("referencias")] IReadOnlyList<AiReference>? References = null);
 
 internal sealed record AiPreferences(
     [property: JsonPropertyName("excluir_titulos")] IReadOnlyList<string> ExcludeTitles,
@@ -102,3 +109,8 @@ internal sealed record AiRenderRequest([property: JsonPropertyName("cv")] AiCv C
 internal sealed record AiAdaptResponse([property: JsonPropertyName("cv")] AiCv Cv);
 
 internal sealed record AiLetterResponse([property: JsonPropertyName("carta")] string Letter);
+
+internal sealed record AiImportResponse(
+    [property: JsonPropertyName("cv")] AiCv Cv,
+    [property: JsonPropertyName("origen")] string Source,
+    [property: JsonPropertyName("avisos")] IReadOnlyList<string>? Warnings = null);

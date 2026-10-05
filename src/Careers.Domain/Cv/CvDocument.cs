@@ -13,7 +13,8 @@ public sealed record CvDocument(
     IReadOnlyList<CvExperience>? Research = null,
     IReadOnlyList<CvCertification>? Certifications = null,
     IReadOnlyList<CvLanguage>? Languages = null,
-    IReadOnlyList<string>? Hidden = null)
+    IReadOnlyList<string>? Hidden = null,
+    IReadOnlyList<CvReference>? References = null)
 {
     // Older stored CVs lack these: they read back as empty, never null.
     public IReadOnlyList<CvExperience> Research { get; init; } = Research ?? [];
@@ -22,13 +23,15 @@ public sealed record CvDocument(
 
     public IReadOnlyList<CvLanguage> Languages { get; init; } = Languages ?? [];
 
+    public IReadOnlyList<CvReference> References { get; init; } = References ?? [];
+
     /// <summary>What stays out of the PDF: section keys (<see cref="HiddenKeys"/>). Everything is stored either way; empty = the recommended default.</summary>
     public IReadOnlyList<string> Hidden { get; init; } = Hidden ?? [];
 
     /// <summary>The sections and contact details a person can switch off for the PDF.</summary>
     public static IReadOnlySet<string> HiddenKeys { get; } = new HashSet<string>
     {
-        "resumen", "experiencia", "investigacion", "proyectos", "educacion", "habilidades", "certificaciones", "idiomas",
+        "resumen", "experiencia", "investigacion", "proyectos", "educacion", "habilidades", "certificaciones", "idiomas", "referencias",
         "contacto.telefono", "contacto.ubicacion", "contacto.enlaces",
     };
 
@@ -59,6 +62,9 @@ public sealed record CvProject(string Name, string Description, IReadOnlyList<st
 public sealed record CvEducation(string Title, string Institution, string From, string? To = null, string? Location = null, bool Include = true);
 
 public sealed record CvCertification(string Name, string Issuer = "", string Year = "", bool Include = true);
+
+/// <summary>A person who vouches for the candidate. Third-party data: imported ones start out of the PDF.</summary>
+public sealed record CvReference(string Name, string Role = "", string Contact = "", bool Include = true);
 
 public sealed record CvLanguage(string Name, string Level = "", bool Include = true);
 
