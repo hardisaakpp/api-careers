@@ -16,19 +16,35 @@ internal sealed record AiExperience(
     [property: JsonPropertyName("desde")] string From,
     [property: JsonPropertyName("hasta")] string? To,
     [property: JsonPropertyName("logros")] IReadOnlyList<string> Achievements,
-    [property: JsonPropertyName("tecnologias")] IReadOnlyList<string> Technologies);
+    [property: JsonPropertyName("tecnologias")] IReadOnlyList<string> Technologies,
+    [property: JsonPropertyName("ubicacion")] string? Location = null,
+    [property: JsonPropertyName("incluir")] bool Include = true);
 
 internal sealed record AiProject(
     [property: JsonPropertyName("nombre")] string Name,
     [property: JsonPropertyName("descripcion")] string Description,
     [property: JsonPropertyName("url")] string? Url,
-    [property: JsonPropertyName("tecnologias")] IReadOnlyList<string> Technologies);
+    [property: JsonPropertyName("tecnologias")] IReadOnlyList<string> Technologies,
+    [property: JsonPropertyName("incluir")] bool Include = true);
 
 internal sealed record AiEducation(
     [property: JsonPropertyName("titulo")] string Title,
     [property: JsonPropertyName("institucion")] string Institution,
     [property: JsonPropertyName("desde")] string From,
-    [property: JsonPropertyName("hasta")] string? To);
+    [property: JsonPropertyName("hasta")] string? To,
+    [property: JsonPropertyName("ubicacion")] string? Location = null,
+    [property: JsonPropertyName("incluir")] bool Include = true);
+
+internal sealed record AiCertification(
+    [property: JsonPropertyName("nombre")] string Name,
+    [property: JsonPropertyName("emisor")] string Issuer,
+    [property: JsonPropertyName("anio")] string Year,
+    [property: JsonPropertyName("incluir")] bool Include = true);
+
+internal sealed record AiLanguage(
+    [property: JsonPropertyName("nombre")] string Name,
+    [property: JsonPropertyName("nivel")] string Level,
+    [property: JsonPropertyName("incluir")] bool Include = true);
 
 internal sealed record AiSkillGroup(
     [property: JsonPropertyName("nombre")] string Name,
@@ -42,7 +58,11 @@ internal sealed record AiCv(
     [property: JsonPropertyName("experiencia")] IReadOnlyList<AiExperience> Experience,
     [property: JsonPropertyName("proyectos")] IReadOnlyList<AiProject> Projects,
     [property: JsonPropertyName("educacion")] IReadOnlyList<AiEducation> Education,
-    [property: JsonPropertyName("habilidades")] IReadOnlyList<AiSkillGroup> Skills);
+    [property: JsonPropertyName("habilidades")] IReadOnlyList<AiSkillGroup> Skills,
+    [property: JsonPropertyName("investigacion")] IReadOnlyList<AiExperience>? Research = null,
+    [property: JsonPropertyName("certificaciones")] IReadOnlyList<AiCertification>? Certifications = null,
+    [property: JsonPropertyName("idiomas")] IReadOnlyList<AiLanguage>? Languages = null,
+    [property: JsonPropertyName("ocultas")] IReadOnlyList<string>? Hidden = null);
 
 internal sealed record AiPreferences(
     [property: JsonPropertyName("excluir_titulos")] IReadOnlyList<string> ExcludeTitles,

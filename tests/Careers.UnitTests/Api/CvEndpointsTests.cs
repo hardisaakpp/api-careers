@@ -98,6 +98,60 @@ public class CvEndpointsTests : IClassFixture<CareersApiFactory>
     }
 
     [Fact]
+    public async Task A_cv_saved_before_the_new_sections_existed_still_loads_with_them_empty()
+    {
+        var client = _factory.ClientFor(Guid.NewGuid());
+        const string legacy = """
+            {"fullName":"Ana","headline":"","summary":"","contact":{"email":"","links":{}},
+             "experience":[{"role":"Dev","organization":"Acme","from":"2022","achievements":[],"technologies":[]}],
+             "projects":[],"education":[],"skills":[]}
+            """;
+
+        Assert.Equal(HttpStatusCode.NoContent, (await client.PutAsync("/cv", new StringContent(legacy, Encoding.UTF8, "application/json"))).StatusCode);
+
+        var cv = (await CareersApiFactory.Json(await client.GetAsync("/cv"))).GetProperty("cv");
+        Assert.Equal(0, cv.GetProperty("certifications").GetArrayLength());
+        Assert.Equal(0, cv.GetProperty("languages").GetArrayLength());
+        Assert.Equal(0, cv.GetProperty("research").GetArrayLength());
+        Assert.Equal(0, cv.GetProperty("hidden").GetArrayLength());
+        Assert.True(cv.GetProperty("experience")[0].GetProperty("include").GetBoolean()); // shown unless switched off
+    }
+
+    [Fact]
+    public async Task The_new_sections_and_the_pdf_switches_are_stored_and_sent_to_the_renderer()
+    {
+        var client = _factory.ClientFor(Guid.NewGuid());
+        var full = CareersApiFactory.SampleCv("Ana") with
+        {
+            Certifications = [new CvCertification("Scrum Foundation", "Certiprof", "2024"), new CvCertification("Old", Include: false)],
+            Languages = [new CvLanguage("English", "B2")],
+            Research = [new CvExperience("Researcher", "Smart Lab", "2025-10", ["RAG pipeline"], [], Location: "Quito")],
+            Hidden = ["resumen", "contacto.telefono"],
+        };
+
+        Assert.Equal(HttpStatusCode.NoContent, (await client.PutAsJsonAsync("/cv", full)).StatusCode);
+
+        var cv = (await CareersApiFactory.Json(await client.GetAsync("/cv"))).GetProperty("cv");
+        Assert.False(cv.GetProperty("certifications")[1].GetProperty("include").GetBoolean());
+        Assert.Equal("Quito", cv.GetProperty("research")[0].GetProperty("location").GetString());
+        Assert.Equal("contacto.telefono", cv.GetProperty("hidden")[1].GetString());
+
+        await client.PostAsync("/cv/pdf", null);
+        Assert.Equal(["resumen", "contacto.telefono"], _factory.Ai.LastRendered!.Hidden);
+        Assert.False(_factory.Ai.LastRendered.Certifications[1].Include);
+    }
+
+    [Fact]
+    public async Task An_unknown_pdf_switch_is_refused()
+    {
+        var client = _factory.ClientFor(Guid.NewGuid());
+        var response = await client.PutAsJsonAsync("/cv", CareersApiFactory.SampleCv() with { Hidden = ["not-a-section"] });
+
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, response.StatusCode);
+        Assert.True((await CareersApiFactory.Json(response)).GetProperty("errors").TryGetProperty("hidden", out _));
+    }
+
+    [Fact]
     public async Task Oversized_cvs_are_refused()
     {
         var client = _factory.ClientFor(Guid.NewGuid());

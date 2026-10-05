@@ -31,6 +31,25 @@ public class HttpCareersAiTests
         new(HttpStatusCode.OK) { Content = new StringContent(body, Encoding.UTF8, "application/json") };
 
     [Fact]
+    public async Task The_cv_goes_to_the_ai_with_its_new_sections_and_pdf_switches()
+    {
+        var handler = new Handler(_ => new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent("%PDF"u8.ToArray()) });
+        var cv = Careers.UnitTests.Api.CareersApiFactory.SampleCv() with
+        {
+            Languages = [new Careers.Domain.Cv.CvLanguage("English", "B2", Include: false)],
+            Hidden = ["proyectos"],
+        };
+
+        await Client(handler).RenderPdfAsync(cv, default);
+
+        using var sent = JsonDocument.Parse(handler.Calls[0].Body);
+        var sentCv = sent.RootElement.GetProperty("cv");
+        Assert.Equal("English", sentCv.GetProperty("idiomas")[0].GetProperty("nombre").GetString());
+        Assert.False(sentCv.GetProperty("idiomas")[0].GetProperty("incluir").GetBoolean());
+        Assert.Equal("proyectos", sentCv.GetProperty("ocultas")[0].GetString());
+    }
+
+    [Fact]
     public async Task Rank_speaks_the_ai_contract_and_trims_oversized_offers()
     {
         var offer = Offer();

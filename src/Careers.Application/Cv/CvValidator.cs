@@ -88,6 +88,7 @@ public static partial class CvValidator
             Text($"experience[{i}].organization", e.Organization, 150);
             Text($"experience[{i}].from", e.From, 20);
             Text($"experience[{i}].to", e.To, 20);
+            Text($"experience[{i}].location", e.Location, 120);
             Count($"experience[{i}].achievements", e.Achievements.Count, 20);
             if (e.Achievements.Any(a => a.Length > 500))
             {
@@ -115,6 +116,46 @@ public static partial class CvValidator
             Text($"education[{i}].institution", d.Institution, 150);
             Text($"education[{i}].from", d.From, 20);
             Text($"education[{i}].to", d.To, 20);
+            Text($"education[{i}].location", d.Location, 120);
+        }
+
+        Count("research", cv.Research.Count, 20);
+        for (var i = 0; i < cv.Research.Count; i++)
+        {
+            var r = cv.Research[i];
+            Text($"research[{i}].role", r.Role, 150);
+            Text($"research[{i}].organization", r.Organization, 150);
+            Text($"research[{i}].from", r.From, 20);
+            Text($"research[{i}].to", r.To, 20);
+            Text($"research[{i}].location", r.Location, 120);
+            Count($"research[{i}].achievements", r.Achievements.Count, 20);
+            if (r.Achievements.Any(a => a.Length > 500))
+            {
+                Add($"research[{i}].achievements", "max-500");
+            }
+
+            Tags($"research[{i}].technologies", r.Technologies, 30);
+        }
+
+        Count("certifications", cv.Certifications.Count, 40);
+        for (var i = 0; i < cv.Certifications.Count; i++)
+        {
+            var c = cv.Certifications[i];
+            Text($"certifications[{i}].name", c.Name, 150);
+            Text($"certifications[{i}].issuer", c.Issuer, 100);
+            Text($"certifications[{i}].year", c.Year, 20);
+        }
+
+        Count("languages", cv.Languages.Count, 15);
+        for (var i = 0; i < cv.Languages.Count; i++)
+        {
+            Text($"languages[{i}].name", cv.Languages[i].Name, 60);
+            Text($"languages[{i}].level", cv.Languages[i].Level, 40);
+        }
+
+        if (cv.Hidden.Any(key => !CvDocument.HiddenKeys.Contains(key)))
+        {
+            Add("hidden", "unknown-key");
         }
 
         Count("skills", cv.Skills.Count, 20);
