@@ -31,6 +31,17 @@ public class HttpCareersAiTests
         new(HttpStatusCode.OK) { Content = new StringContent(body, Encoding.UTF8, "application/json") };
 
     [Fact]
+    public async Task The_experience_limit_travels_to_the_ai_in_its_own_field()
+    {
+        var handler = new Handler(_ => Json("""{"pendientes":0,"resultados":[]}"""));
+
+        await Client(handler).RankAsync(Careers.UnitTests.Api.CareersApiFactory.SampleCv(), new Careers.Domain.Cv.SearchPreferences([], [], [], [], 3), [Offer()], default);
+
+        using var sent = JsonDocument.Parse(handler.Calls[0].Body);
+        Assert.Equal(3, sent.RootElement.GetProperty("preferencias").GetProperty("max_anos").GetInt32());
+    }
+
+    [Fact]
     public async Task The_cv_goes_to_the_ai_with_its_new_sections_and_pdf_switches()
     {
         var handler = new Handler(_ => new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent("%PDF"u8.ToArray()) });
@@ -106,6 +117,7 @@ public class HttpCareersAiTests
         Assert.Equal(88.5, ranked.Score);
         using var sent = JsonDocument.Parse(handler.Calls[0].Body);
         Assert.Equal("Ana Example", sent.RootElement.GetProperty("cv").GetProperty("nombre").GetString());
+        Assert.Equal(JsonValueKind.Null, sent.RootElement.GetProperty("preferencias").GetProperty("max_anos").ValueKind);
         Assert.Equal(12000, sent.RootElement.GetProperty("ofertas")[0].GetProperty("descripcion").GetString()!.Length);
         Assert.EndsWith("v1/rank", handler.Calls[0].Request.RequestUri!.AbsolutePath);
     }

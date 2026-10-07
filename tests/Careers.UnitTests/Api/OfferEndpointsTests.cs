@@ -159,6 +159,21 @@ public class OfferEndpointsTests : IClassFixture<CareersApiFactory>, IAsyncLifet
     }
 
     [Fact]
+    public async Task The_experience_limit_reaches_the_ai_with_the_rest_of_the_persons_rules()
+    {
+        var ana = _factory.ClientFor(Guid.NewGuid());
+        await ana.PutAsJsonAsync("/cv", CareersApiFactory.SampleCv());
+        await ana.PutAsJsonAsync("/preferences", new SearchPreferences([], [], [], [], 3));
+        _factory.Clock.Advance(TimeSpan.FromHours(7));
+        _factory.Alpha.Offers.Add((Unique("a"), Unique("Backend developer"), "Foo"));
+        await Refresh(ana);
+
+        await ana.GetAsync("/offers?limit=500");
+
+        Assert.Equal(3, _factory.Ai.LastPreferences!.MaxYears);
+    }
+
+    [Fact]
     public async Task Pending_affinity_calculations_are_reported_so_the_screen_can_ask_again()
     {
         var ana = _factory.ClientFor(Guid.NewGuid());

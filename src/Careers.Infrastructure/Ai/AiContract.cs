@@ -75,7 +75,8 @@ internal sealed record AiPreferences(
     [property: JsonPropertyName("excluir_titulos")] IReadOnlyList<string> ExcludeTitles,
     [property: JsonPropertyName("excluir_texto")] IReadOnlyList<string> ExcludeText,
     [property: JsonPropertyName("ubicaciones")] IReadOnlyList<string> Locations,
-    [property: JsonPropertyName("obligatorias")] IReadOnlyList<string> RequiredTechnologies);
+    [property: JsonPropertyName("obligatorias")] IReadOnlyList<string> RequiredTechnologies,
+    [property: JsonPropertyName("max_anos")] int? MaxYears = null);
 
 internal sealed record AiOffer(
     [property: JsonPropertyName("id")] string Id,

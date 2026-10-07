@@ -70,12 +70,15 @@ public sealed record CvLanguage(string Name, string Level = "", bool Include = t
 
 public sealed record CvSkillGroup(string Name, IReadOnlyList<string> Items);
 
-/// <summary>Hard rules: what drops an offer no matter how close it is.</summary>
+/// <summary>Hard rules: what drops an offer no matter how close it is. <see cref="MaxYears"/> is the most years of experience an offer may ask for (null = no limit).</summary>
 public sealed record SearchPreferences(
     IReadOnlyList<string> ExcludeTitles,
     IReadOnlyList<string> ExcludeText,
     IReadOnlyList<string> Locations,
-    IReadOnlyList<string> RequiredTechnologies)
+    IReadOnlyList<string> RequiredTechnologies,
+    int? MaxYears = null)
 {
+    public const int MaxYearsLimit = 30;
+
     public static SearchPreferences None { get; } = new([], [], [], []);
 }

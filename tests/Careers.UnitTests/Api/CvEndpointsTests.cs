@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text;
+using System.Text.Json;
 using Careers.Domain.Cv;
 
 namespace Careers.UnitTests.Api;
@@ -236,6 +237,55 @@ public class CvEndpointsTests : IClassFixture<CareersApiFactory>
         var tooMany = new SearchPreferences(Enumerable.Range(0, 31).Select(i => $"t{i}").ToList(), [], [], []);
 
         Assert.Equal(HttpStatusCode.UnprocessableEntity, (await client.PutAsJsonAsync("/preferences", tooMany)).StatusCode);
+    }
+
+    [Fact]
+    public async Task The_experience_limit_is_stored_and_a_person_without_one_has_no_limit()
+    {
+        var client = _factory.ClientFor(Guid.NewGuid());
+        Assert.Equal(JsonValueKind.Null, (await CareersApiFactory.Json(await client.GetAsync("/preferences"))).GetProperty("maxYears").ValueKind);
+
+        await client.PutAsJsonAsync("/preferences", new SearchPreferences([], [], [], [], 3));
+        Assert.Equal(3, (await CareersApiFactory.Json(await client.GetAsync("/preferences"))).GetProperty("maxYears").GetInt32());
+
+        // Clearing it (null) means no limit again.
+        await client.PutAsJsonAsync("/preferences", new SearchPreferences([], [], [], [], null));
+        Assert.Equal(JsonValueKind.Null, (await CareersApiFactory.Json(await client.GetAsync("/preferences"))).GetProperty("maxYears").ValueKind);
+    }
+
+    [Fact]
+    public async Task Preferences_saved_before_the_limit_existed_still_load_and_save()
+    {
+        var client = _factory.ClientFor(Guid.NewGuid());
+        const string legacy = """{"excludeTitles":["sales"],"excludeText":[],"locations":[],"requiredTechnologies":[]}""";
+
+        var saved = await client.PutAsync("/preferences", new StringContent(legacy, Encoding.UTF8, "application/json"));
+
+        Assert.Equal(HttpStatusCode.NoContent, saved.StatusCode);
+        var back = await CareersApiFactory.Json(await client.GetAsync("/preferences"));
+        Assert.Equal("sales", back.GetProperty("excludeTitles")[0].GetString());
+        Assert.Equal(JsonValueKind.Null, back.GetProperty("maxYears").ValueKind);
+    }
+
+    [Theory]
+    [InlineData(-1)]
+    [InlineData(31)]
+    public async Task An_unreasonable_experience_limit_is_refused(int years)
+    {
+        var response = await _factory.ClientFor(Guid.NewGuid()).PutAsJsonAsync("/preferences", new SearchPreferences([], [], [], [], years));
+
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, response.StatusCode);
+        Assert.True((await CareersApiFactory.Json(response)).GetProperty("errors").TryGetProperty("maxYears", out _));
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(30)]
+    public async Task The_edges_of_the_range_are_allowed(int years)
+    {
+        var response = await _factory.ClientFor(Guid.NewGuid()).PutAsJsonAsync("/preferences", new SearchPreferences([], [], [], [], years));
+
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
     }
 
     private static ByteArrayContent File(byte[] bytes) =>

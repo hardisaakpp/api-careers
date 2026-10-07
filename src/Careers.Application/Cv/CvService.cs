@@ -51,7 +51,13 @@ public sealed class CvService(ICvRepository cvs, IPreferencesRepository preferen
             throw new ValidationFailedException(errors);
         }
 
-        SearchPreferences Clean(SearchPreferences p) => new(Trim(p.ExcludeTitles), Trim(p.ExcludeText), Trim(p.Locations), Trim(p.RequiredTechnologies));
+        if (value.MaxYears is < 0 or > SearchPreferences.MaxYearsLimit)
+        {
+            throw new ValidationFailedException(new Dictionary<string, string[]> { ["maxYears"] = ["out-of-range"] });
+        }
+
+        SearchPreferences Clean(SearchPreferences p) =>
+            new(Trim(p.ExcludeTitles), Trim(p.ExcludeText), Trim(p.Locations), Trim(p.RequiredTechnologies), p.MaxYears);
         await preferences.SaveAsync(userId, Clean(value), ct);
     }
 

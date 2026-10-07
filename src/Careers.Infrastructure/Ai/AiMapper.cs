@@ -38,7 +38,7 @@ internal static class AiMapper
         cv.References?.Select(r => new CvReference(r.Name, r.Role, r.Contact, r.Include)).ToList());
 
     public static AiPreferences ToAi(SearchPreferences p) =>
-        new(p.ExcludeTitles, p.ExcludeText, p.Locations, p.RequiredTechnologies);
+        new(p.ExcludeTitles, p.ExcludeText, p.Locations, p.RequiredTechnologies, p.MaxYears);
 
     /// <summary>The AI service caps each field; trimming here means an unusually long offer is shortened, not rejected.</summary>
     public static AiOffer ToAi(JobOffer o) => new(
