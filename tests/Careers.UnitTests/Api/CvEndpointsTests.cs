@@ -126,7 +126,7 @@ public class CvEndpointsTests : IClassFixture<CareersApiFactory>
             Certifications = [new CvCertification("Scrum Foundation", "Certiprof", "2024"), new CvCertification("Old", Include: false)],
             Languages = [new CvLanguage("English", "B2")],
             Research = [new CvExperience("Researcher", "Smart Lab", "2025-10", ["RAG pipeline"], [], Location: "Quito")],
-            Hidden = ["resumen", "contacto.telefono"],
+            Hidden = ["resumen", "contacto.telefono", "contacto.iconos"],
         };
 
         Assert.Equal(HttpStatusCode.NoContent, (await client.PutAsJsonAsync("/cv", full)).StatusCode);
@@ -135,9 +135,10 @@ public class CvEndpointsTests : IClassFixture<CareersApiFactory>
         Assert.False(cv.GetProperty("certifications")[1].GetProperty("include").GetBoolean());
         Assert.Equal("Quito", cv.GetProperty("research")[0].GetProperty("location").GetString());
         Assert.Equal("contacto.telefono", cv.GetProperty("hidden")[1].GetString());
+        Assert.Equal("contacto.iconos", cv.GetProperty("hidden")[2].GetString());
 
         await client.PostAsync("/cv/pdf", null);
-        Assert.Equal(["resumen", "contacto.telefono"], _factory.Ai.LastRendered!.Hidden);
+        Assert.Equal(["resumen", "contacto.telefono", "contacto.iconos"], _factory.Ai.LastRendered!.Hidden);
         Assert.False(_factory.Ai.LastRendered.Certifications[1].Include);
     }
 

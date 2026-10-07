@@ -32,7 +32,7 @@ public sealed record CvDocument(
     public static IReadOnlySet<string> HiddenKeys { get; } = new HashSet<string>
     {
         "resumen", "experiencia", "investigacion", "proyectos", "educacion", "habilidades", "certificaciones", "idiomas", "referencias",
-        "contacto.telefono", "contacto.ubicacion", "contacto.enlaces",
+        "contacto.telefono", "contacto.ubicacion", "contacto.enlaces", "contacto.iconos",
     };
 
     public static CvDocument Empty { get; } = new(
