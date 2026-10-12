@@ -69,12 +69,16 @@ public sealed class JobApplication
 
     public void Discard(DateTimeOffset now) => MoveTo(ApplicationStatus.Discarded, now);
 
+    /// <summary>Changing one's mind: a discarded application goes back to being a draft, with its letter and CV as they were.</summary>
+    public void Reopen(DateTimeOffset now) => MoveTo(ApplicationStatus.Draft, now);
+
     private void MoveTo(ApplicationStatus next, DateTimeOffset now)
     {
         var allowed = Status switch
         {
             ApplicationStatus.Draft => next is ApplicationStatus.Confirmed or ApplicationStatus.Discarded,
             ApplicationStatus.Confirmed => next is ApplicationStatus.Sent or ApplicationStatus.Discarded,
+            ApplicationStatus.Discarded => next is ApplicationStatus.Draft,
             _ => false,
         };
         if (!allowed)

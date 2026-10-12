@@ -61,7 +61,7 @@ public interface IOfferFeed
     Task<IReadOnlyList<JobOffer>> FetchAsync(DateTimeOffset now, CancellationToken ct);
 }
 
-public sealed record RankedOffer(Guid OfferId, double Score, string? ExcludedReason, IReadOnlyList<string> Matches);
+public sealed record RankedOffer(Guid OfferId, double Score, string? ExcludedReason, IReadOnlyList<string> Matches, int? RequiredYears = null);
 
 /// <param name="Pending">Offers whose affinity is still being computed; ask again later.</param>
 public sealed record RankResult(int Pending, IReadOnlyList<RankedOffer> Offers);

@@ -95,7 +95,8 @@ internal sealed record AiRankedOffer(
     [property: JsonPropertyName("id")] string Id,
     [property: JsonPropertyName("puntaje")] double Score,
     [property: JsonPropertyName("excluida")] string? Excluded,
-    [property: JsonPropertyName("coinciden")] IReadOnlyList<string> Matches);
+    [property: JsonPropertyName("coinciden")] IReadOnlyList<string> Matches,
+    [property: JsonPropertyName("anos")] int? Years = null);
 
 internal sealed record AiRankResponse(
     [property: JsonPropertyName("pendientes")] int Pending,

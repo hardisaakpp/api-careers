@@ -12,6 +12,7 @@ public enum ApplicationAction
     Confirm,
     MarkSent,
     Discard,
+    Reopen,
 }
 
 public sealed class ApplicationService(
@@ -89,6 +90,9 @@ public sealed class ApplicationService(
                     break;
                 case ApplicationAction.MarkSent:
                     application.MarkSent(now);
+                    break;
+                case ApplicationAction.Reopen:
+                    application.Reopen(now);
                     break;
                 default:
                     application.Discard(now);

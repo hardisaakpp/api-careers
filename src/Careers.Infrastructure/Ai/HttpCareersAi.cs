@@ -25,7 +25,7 @@ public sealed class HttpCareersAi(HttpClient http, ILogger<HttpCareersAi> logger
             new AiRankRequest(AiMapper.ToAi(cv), AiMapper.ToAi(preferences), offers.Select(AiMapper.ToAi).ToList()), ct);
         var ranked = response.Results
             .Where(r => Guid.TryParse(r.Id, out _))
-            .Select(r => new RankedOffer(Guid.Parse(r.Id), r.Score, r.Excluded, r.Matches))
+            .Select(r => new RankedOffer(Guid.Parse(r.Id), r.Score, r.Excluded, r.Matches, r.Years))
             .ToList();
         return new RankResult(response.Pending, ranked);
     }

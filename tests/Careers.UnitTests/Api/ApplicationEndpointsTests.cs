@@ -114,6 +114,22 @@ public class ApplicationEndpointsTests : IClassFixture<CareersApiFactory>
     }
 
     [Fact]
+    public async Task A_discarded_application_can_be_reopened_but_a_sent_one_cannot()
+    {
+        var (client, offerId) = await PersonWithAnOffer();
+        var id = await Prepare(client, offerId);
+
+        Assert.Equal(HttpStatusCode.Conflict, (await client.PostAsync($"/applications/{id}/reopen", null)).StatusCode); // still a draft
+        await client.PostAsync($"/applications/{id}/discard", null);
+        Assert.Equal("Draft", (await CareersApiFactory.Json(await client.PostAsync($"/applications/{id}/reopen", null))).GetProperty("status").GetString());
+        Assert.Equal(HttpStatusCode.NoContent, (await client.PutAsJsonAsync($"/applications/{id}/letter", new { coverLetter = "again" })).StatusCode);
+
+        await client.PostAsync($"/applications/{id}/confirm", null);
+        await client.PostAsync($"/applications/{id}/sent", null);
+        Assert.Equal(HttpStatusCode.Conflict, (await client.PostAsync($"/applications/{id}/reopen", null)).StatusCode);
+    }
+
+    [Fact]
     public async Task The_letter_can_be_edited_while_it_is_still_open_within_limits()
     {
         var (client, offerId) = await PersonWithAnOffer();

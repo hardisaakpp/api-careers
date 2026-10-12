@@ -59,6 +59,7 @@ public static class ApplicationEndpoints
         Act("confirm", ApplicationAction.Confirm);
         Act("sent", ApplicationAction.MarkSent);
         Act("discard", ApplicationAction.Discard);
+        Act("reopen", ApplicationAction.Reopen);
 
         void Act(string name, ApplicationAction action) =>
             group.MapPost($"/{{id:guid}}/{name}", async (HttpContext http, Guid id, ApplicationService applications, CancellationToken ct) =>

@@ -69,7 +69,7 @@ public class JobApplicationTests
     }
 
     [Fact]
-    public void Sent_and_discarded_are_final()
+    public void Sent_is_final_and_a_discarded_one_only_goes_back_to_draft()
     {
         var sent = Draft();
         sent.Confirm(Now);
@@ -77,10 +77,36 @@ public class JobApplicationTests
         Assert.Throws<InvalidStatusTransitionException>(() => sent.Discard(Now));
         Assert.Throws<InvalidStatusTransitionException>(() => sent.Confirm(Now));
 
+        Assert.Throws<InvalidStatusTransitionException>(() => sent.Reopen(Now));
+
         var discarded = Draft();
         discarded.Discard(Now);
         Assert.Throws<InvalidStatusTransitionException>(() => discarded.Confirm(Now));
         Assert.Throws<InvalidStatusTransitionException>(() => discarded.EditLetter("x", Now));
+    }
+
+    [Fact]
+    public void A_discarded_application_can_be_reopened_as_a_draft_and_keeps_its_letter()
+    {
+        var application = Draft();
+        application.EditLetter("My letter", Now);
+        application.Discard(Now);
+
+        application.Reopen(Now);
+
+        Assert.Equal(ApplicationStatus.Draft, application.Status);
+        Assert.Equal("My letter", application.CoverLetter);
+        application.EditLetter("Better", Now);
+        application.Confirm(Now);
+    }
+
+    [Fact]
+    public void Only_a_discarded_application_can_be_reopened()
+    {
+        Assert.Throws<InvalidStatusTransitionException>(() => Draft().Reopen(Now));
+        var confirmed = Draft();
+        confirmed.Confirm(Now);
+        Assert.Throws<InvalidStatusTransitionException>(() => confirmed.Reopen(Now));
     }
 
     [Fact]

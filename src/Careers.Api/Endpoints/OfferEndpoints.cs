@@ -30,6 +30,7 @@ public static class OfferEndpoints
                     i.Matches,
                     i.ApplicationId,
                     i.ApplicationStatus,
+                    i.RequiredYears,
                 }),
             });
         }).RequireRateLimiting(CvEndpoints.HeavyPolicy);

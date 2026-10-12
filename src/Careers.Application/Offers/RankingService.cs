@@ -5,7 +5,7 @@ using Careers.Domain.Offers;
 namespace Careers.Application.Offers;
 
 public sealed record OfferListItem(
-    JobOffer Offer, double Score, IReadOnlyList<string> Matches, Guid? ApplicationId, ApplicationStatus? ApplicationStatus);
+    JobOffer Offer, double Score, IReadOnlyList<string> Matches, Guid? ApplicationId, ApplicationStatus? ApplicationStatus, int? RequiredYears = null);
 
 /// <param name="Total">Offers known.</param>
 /// <param name="Excluded">Dropped by the person's hard rules.</param>
@@ -42,7 +42,7 @@ public sealed class RankingService(
             .Select(r =>
             {
                 mine.TryGetValue(r.OfferId, out var application);
-                return new OfferListItem(byId[r.OfferId], r.Score, r.Matches, application?.Id, application?.Status);
+                return new OfferListItem(byId[r.OfferId], r.Score, r.Matches, application?.Id, application?.Status, r.RequiredYears);
             })
             .ToList();
         return new OfferRanking(known.Count, ranked.Offers.Count(r => r.ExcludedReason is not null), ranked.Pending, shown);

@@ -46,7 +46,8 @@ public sealed class FakeAi : ICareersAi
             o.Id,
             o.Title.Contains("backend", StringComparison.OrdinalIgnoreCase) ? 90 : 20,
             o.Title.Contains("sales", StringComparison.OrdinalIgnoreCase) ? "title excluded" : null,
-            o.Description.Contains(".NET") ? [".NET"] : [])).ToList();
+            o.Description.Contains(".NET") ? [".NET"] : [],
+            o.Title.Contains("senior", StringComparison.OrdinalIgnoreCase) ? 5 : null)).ToList();
         return Task.FromResult(new RankResult(Pending, ranked));
     }
 
