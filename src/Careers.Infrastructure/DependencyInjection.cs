@@ -44,6 +44,20 @@ public static class DependencyInjection
         Feed<RemotiveFeed>();
         Feed<RemoteOkFeed>();
         Feed<WeWorkRemotelyFeed>();
+        Feed<JobicyFeed>();
+        Feed<HimalayasFeed>();
+        Feed<GetOnBoardFeed>();
+
+        // LinkedIn goes through the person's own Apify account: without a token there is nothing to register.
+        var apify = configuration.GetSection("Apify");
+        if (!string.IsNullOrWhiteSpace(apify["Token"]))
+        {
+            services.Configure<ApifyOptions>(apify);
+            services.AddHttpClient(nameof(ApifyLinkedInFeed), client => client.Timeout = TimeSpan.FromMinutes(5));
+            services.AddTransient<IOfferFeed>(sp => ActivatorUtilities.CreateInstance<ApifyLinkedInFeed>(
+                sp, sp.GetRequiredService<IHttpClientFactory>().CreateClient(nameof(ApifyLinkedInFeed))));
+        }
+
         return services;
     }
 }

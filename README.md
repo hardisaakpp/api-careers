@@ -16,7 +16,7 @@ stockline-web ──token de api-stockline──▶ api-careers ──X-Api-Key�
 | `GET/PUT /cv` | La hoja de vida como documento. Solo el nombre es obligatorio; hay límites de tamaño y los enlaces deben ser http(s). |
 | `POST /cv/pdf` | PDF del borrador que se está editando (no se guarda) o, sin cuerpo, de la hoja de vida guardada. |
 | `GET/PUT /preferences` | Reglas duras que descartan ofertas: títulos, textos, ubicaciones, tecnologías obligatorias. |
-| `POST /offers/refresh` | Consulta Remotive, Remote OK y We Work Remotely. Cada fuente, como máximo una vez cada 6 h (`?force=true` lo salta). Una fuente que falla no frena a las demás. |
+| `POST /offers/refresh` | Consulta Remotive, Remote OK, We Work Remotely, Jobicy (remoto LatAm/EE. UU.), Himalayas (remoto abierto a Ecuador) y Get on Board (tech LatAm); y LinkedIn si hay `APIFY_TOKEN` (vía Apify, consume créditos; los términos de LinkedIn prohíben el rastreo automatizado, así que es opcional y bajo tu responsabilidad). Cada fuente, como máximo una vez cada 6 h (`?force=true` lo salta). Una fuente que falla no frena a las demás. |
 | `GET /offers` | Ofertas ordenadas por cercanía a **tu** hoja de vida, con qué tecnologías coinciden, dónde aplicar y tu estado en cada una. `pending` indica ofertas cuya afinidad aún se calcula. |
 | `POST /applications` | Prepara el borrador para una oferta: hoja de vida adaptada + carta. Repetirlo devuelve el mismo borrador. |
 | `GET /applications[/{id}]`, `PUT /applications/{id}/letter`, `GET /applications/{id}/cv.pdf` | Seguimiento, carta editable y el PDF **exacto** que se revisó. |
