@@ -11,6 +11,9 @@ namespace Careers.Infrastructure.Persistence;
 public sealed class CvRow
 {
     public Guid UserId { get; set; }
+
+    /// <summary>One document per person and language (<c>es</c>, <c>en</c>).</summary>
+    public string Language { get; set; } = "es";
     public string Json { get; set; } = string.Empty;
     public DateTimeOffset UpdatedAt { get; set; }
 }
@@ -47,7 +50,8 @@ public sealed class CareersDbContext(DbContextOptions<CareersDbContext> options)
         model.Entity<CvRow>(b =>
         {
             b.ToTable("cvs");
-            b.HasKey(x => x.UserId);
+            b.HasKey(x => new { x.UserId, x.Language });
+            b.Property(x => x.Language).HasMaxLength(5).HasDefaultValue("es");
             b.Property(x => x.Json).IsRequired();
         });
         model.Entity<PreferencesRow>(b =>

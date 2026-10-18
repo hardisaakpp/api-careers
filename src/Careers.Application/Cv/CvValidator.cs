@@ -85,6 +85,7 @@ public static partial class CvValidator
         {
             var e = cv.Experience[i];
             Text($"experience[{i}].role", e.Role, 150);
+            Text($"experience[{i}].project", e.Project, 150);
             Text($"experience[{i}].organization", e.Organization, 150);
             Text($"experience[{i}].from", e.From, 20);
             Text($"experience[{i}].to", e.To, 20);
@@ -124,6 +125,7 @@ public static partial class CvValidator
         {
             var r = cv.Research[i];
             Text($"research[{i}].role", r.Role, 150);
+            Text($"research[{i}].project", r.Project, 150);
             Text($"research[{i}].organization", r.Organization, 150);
             Text($"research[{i}].from", r.From, 20);
             Text($"research[{i}].to", r.To, 20);

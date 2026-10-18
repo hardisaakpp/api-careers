@@ -26,7 +26,7 @@ public static partial class CvDraftCleaner
     private static CvExperience Work(CvExperience e) => new(
         Cut(e.Role, 150), Cut(e.Organization, 150), Cut(e.From, 20),
         e.Achievements.Take(20).Select(a => Cut(a, 500)).ToList(), Tags(e.Technologies, 30),
-        CutOrNull(e.To, 20), CutOrNull(e.Location, 120), e.Include);
+        CutOrNull(e.To, 20), CutOrNull(e.Location, 120), e.Include, CutOrNull(e.Project, 150));
 
     private static string Cut(string? value, int max) => value is null ? string.Empty : value.Length <= max ? value : value[..max];
 

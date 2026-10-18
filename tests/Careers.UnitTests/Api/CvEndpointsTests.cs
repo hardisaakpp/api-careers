@@ -126,7 +126,7 @@ public class CvEndpointsTests : IClassFixture<CareersApiFactory>
         {
             Certifications = [new CvCertification("Scrum Foundation", "Certiprof", "2024"), new CvCertification("Old", Include: false)],
             Languages = [new CvLanguage("English", "B2")],
-            Research = [new CvExperience("Researcher", "Smart Lab", "2025-10", ["RAG pipeline"], [], Location: "Quito")],
+            Research = [new CvExperience("Researcher", "Smart Lab", "2025-10", ["RAG pipeline"], [], Location: "Quito", Project: "Smart Lab: tutor inteligente")],
             Hidden = ["resumen", "contacto.telefono", "contacto.iconos"],
         };
 
@@ -135,12 +135,14 @@ public class CvEndpointsTests : IClassFixture<CareersApiFactory>
         var cv = (await CareersApiFactory.Json(await client.GetAsync("/cv"))).GetProperty("cv");
         Assert.False(cv.GetProperty("certifications")[1].GetProperty("include").GetBoolean());
         Assert.Equal("Quito", cv.GetProperty("research")[0].GetProperty("location").GetString());
+        Assert.Equal("Smart Lab: tutor inteligente", cv.GetProperty("research")[0].GetProperty("project").GetString());
         Assert.Equal("contacto.telefono", cv.GetProperty("hidden")[1].GetString());
         Assert.Equal("contacto.iconos", cv.GetProperty("hidden")[2].GetString());
 
         await client.PostAsync("/cv/pdf", null);
         Assert.Equal(["resumen", "contacto.telefono", "contacto.iconos"], _factory.Ai.LastRendered!.Hidden);
         Assert.False(_factory.Ai.LastRendered.Certifications[1].Include);
+        Assert.Equal("Smart Lab: tutor inteligente", _factory.Ai.LastRendered.Research![0].Project);
     }
 
     [Fact]
@@ -196,6 +198,79 @@ public class CvEndpointsTests : IClassFixture<CareersApiFactory>
         await client.PutAsJsonAsync("/cv", CareersApiFactory.SampleCv("Saved"));
         Assert.Equal(HttpStatusCode.OK, (await client.PostAsync("/cv/pdf", null)).StatusCode);
         Assert.Equal("Saved", _factory.Ai.LastRendered!.FullName);
+    }
+
+    [Fact]
+    public async Task Each_language_is_its_own_cv_and_the_original_is_never_touched()
+    {
+        var client = _factory.ClientFor(Guid.NewGuid());
+        await client.PutAsJsonAsync("/cv", CareersApiFactory.SampleCv("Ana"));
+
+        var empty = await CareersApiFactory.Json(await client.GetAsync("/cv?lang=en"));
+        Assert.False(empty.GetProperty("saved").GetBoolean());
+
+        Assert.Equal(HttpStatusCode.NoContent, (await client.PutAsJsonAsync("/cv?lang=en", CareersApiFactory.SampleCv("Ana (EN)"))).StatusCode);
+
+        Assert.Equal("Ana (EN)", (await CareersApiFactory.Json(await client.GetAsync("/cv?lang=en"))).GetProperty("cv").GetProperty("fullName").GetString());
+        Assert.Equal("Ana", (await CareersApiFactory.Json(await client.GetAsync("/cv"))).GetProperty("cv").GetProperty("fullName").GetString());
+    }
+
+    [Fact]
+    public async Task An_unsupported_language_is_refused()
+    {
+        var client = _factory.ClientFor(Guid.NewGuid());
+
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, (await client.GetAsync("/cv?lang=fr")).StatusCode);
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, (await client.PutAsJsonAsync("/cv?lang=fr", CareersApiFactory.SampleCv())).StatusCode);
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, (await client.PostAsJsonAsync("/cv/pdf?lang=fr", CareersApiFactory.SampleCv())).StatusCode);
+    }
+
+    [Fact]
+    public async Task The_pdf_is_rendered_in_the_language_asked_for()
+    {
+        var client = _factory.ClientFor(Guid.NewGuid());
+
+        await client.PostAsJsonAsync("/cv/pdf", CareersApiFactory.SampleCv());
+        Assert.Equal("es", _factory.Ai.LastRenderedLanguage);
+
+        await client.PostAsJsonAsync("/cv/pdf?lang=en", CareersApiFactory.SampleCv());
+        Assert.Equal("en", _factory.Ai.LastRenderedLanguage);
+
+        await client.PutAsJsonAsync("/cv?lang=en", CareersApiFactory.SampleCv("English one"));
+        await client.PostAsync("/cv/pdf?lang=en", null);
+        Assert.Equal("English one", _factory.Ai.LastRendered!.FullName);
+    }
+
+    [Fact]
+    public async Task Translating_gives_an_unsaved_english_draft_of_the_saved_spanish_cv()
+    {
+        var client = _factory.ClientFor(Guid.NewGuid());
+        var missing = await client.PostAsync("/cv/translate", null);
+        Assert.Equal(HttpStatusCode.Conflict, missing.StatusCode);
+        Assert.Equal("cv-missing", (await CareersApiFactory.Json(missing)).GetProperty("code").GetString());
+
+        await client.PutAsJsonAsync("/cv", CareersApiFactory.SampleCv("Ana"));
+        var body = await CareersApiFactory.Json(await client.PostAsync("/cv/translate", null));
+
+        Assert.StartsWith("EN: ", body.GetProperty("cv").GetProperty("headline").GetString());
+        Assert.Equal("no-traducido:1", body.GetProperty("warnings")[0].GetString());
+        Assert.False((await CareersApiFactory.Json(await client.GetAsync("/cv?lang=en"))).GetProperty("saved").GetBoolean());
+    }
+
+    [Fact]
+    public async Task Translating_fails_cleanly_when_the_ai_service_is_down()
+    {
+        var client = _factory.ClientFor(Guid.NewGuid());
+        await client.PutAsJsonAsync("/cv", CareersApiFactory.SampleCv());
+        _factory.Ai.Down = true;
+        try
+        {
+            Assert.Equal(HttpStatusCode.ServiceUnavailable, (await client.PostAsync("/cv/translate", null)).StatusCode);
+        }
+        finally
+        {
+            _factory.Ai.Down = false;
+        }
     }
 
     [Fact]

@@ -4,25 +4,40 @@ namespace Careers.Application.Cv;
 
 public sealed class CvService(ICvRepository cvs, IPreferencesRepository preferences, ICareersAi ai)
 {
-    public async Task<(CvDocument Cv, bool Saved)> GetAsync(Guid userId, CancellationToken ct)
+    public async Task<(CvDocument Cv, bool Saved)> GetAsync(Guid userId, string language, CancellationToken ct)
     {
-        var cv = await cvs.GetAsync(userId, ct);
+        var cv = await cvs.GetAsync(userId, EnsureLanguage(language), ct);
         return (cv ?? CvDocument.Empty, cv is not null);
     }
 
-    public async Task SaveAsync(Guid userId, CvDocument cv, CancellationToken ct)
+    public async Task SaveAsync(Guid userId, string language, CvDocument cv, CancellationToken ct)
     {
         CvValidator.EnsureValid(cv);
-        await cvs.SaveAsync(userId, cv, ct);
+        await cvs.SaveAsync(userId, EnsureLanguage(language), cv, ct);
     }
 
-    /// <summary>The PDF of the draft being edited, or of the saved CV when there is no draft. Nothing is stored.</summary>
-    public async Task<byte[]> RenderAsync(Guid userId, CvDocument? draft, CancellationToken ct)
+    /// <summary>The PDF of the draft being edited, or of the saved CV in that language when there is no draft. Nothing is stored.</summary>
+    public async Task<byte[]> RenderAsync(Guid userId, string language, CvDocument? draft, CancellationToken ct)
     {
-        var cv = draft ?? await cvs.GetAsync(userId, ct) ?? throw new ConflictException("cv-missing", "Save your CV first.");
+        EnsureLanguage(language);
+        var cv = draft ?? await cvs.GetAsync(userId, language, ct) ?? throw new ConflictException("cv-missing", "Save your CV first.");
         CvValidator.EnsureValid(cv);
-        return await ai.RenderPdfAsync(cv, ct);
+        return await ai.RenderPdfAsync(cv, language, ct);
     }
+
+    /// <summary>An English draft of the saved Spanish CV. Nothing is stored: the person edits it and saves it as the English version.</summary>
+    public async Task<CvTranslation> TranslateAsync(Guid userId, CancellationToken ct)
+    {
+        var source = await cvs.GetAsync(userId, CvLanguages.Spanish, ct)
+            ?? throw new ConflictException("cv-missing", "Save your CV in Spanish first.");
+        var translated = await ai.TranslateAsync(source, ct);
+        return translated with { Cv = CvDraftCleaner.Clean(translated.Cv) };
+    }
+
+    private static string EnsureLanguage(string language) =>
+        CvLanguages.IsSupported(language)
+            ? language
+            : throw new ValidationFailedException(new Dictionary<string, string[]> { ["lang"] = ["unsupported"] });
 
     /// <summary>Reads an existing CV file into a draft for the form. Nothing is stored: the person reviews it and saves.</summary>
     public async Task<CvImport> ImportAsync(byte[] file, CancellationToken ct)

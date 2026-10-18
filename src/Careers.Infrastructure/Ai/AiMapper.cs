@@ -19,10 +19,10 @@ internal static class AiMapper
         cv.References.Select(r => new AiReference(r.Name, r.Role, r.Contact, r.Include)).ToList());
 
     private static AiExperience ToAi(CvExperience e) =>
-        new(e.Role, e.Organization, e.From, e.To, e.Achievements, e.Technologies, e.Location, e.Include);
+        new(e.Role, e.Organization, e.From, e.To, e.Achievements, e.Technologies, e.Location, e.Include, e.Project);
 
     private static CvExperience FromAi(AiExperience e) =>
-        new(e.Role, e.Organization, e.From, e.Achievements, e.Technologies, e.To, e.Location, e.Include);
+        new(e.Role, e.Organization, e.From, e.Achievements, e.Technologies, e.To, e.Location, e.Include, e.Project);
 
     public static CvDocument FromAi(AiCv cv) => new(
         cv.FullName, cv.Headline, cv.Summary,

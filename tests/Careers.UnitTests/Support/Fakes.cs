@@ -76,11 +76,24 @@ public sealed class FakeAi : ICareersAi
         return Task.FromResult(NextImport ?? new CvImport(CvDocument.Empty with { FullName = "Imported" }, "pdf", []));
     }
 
-    public Task<byte[]> RenderPdfAsync(CvDocument cv, CancellationToken ct)
+    public Task<byte[]> RenderPdfAsync(CvDocument cv, string language, CancellationToken ct)
     {
         Check();
         LastRendered = cv;
+        LastRenderedLanguage = language;
         return Task.FromResult("%PDF-fake"u8.ToArray());
+    }
+
+    public string? LastRenderedLanguage { get; private set; }
+
+    public int TranslateCalls { get; private set; }
+
+    /// <summary>The "translation" prefixes the headline so a test can tell it from the original.</summary>
+    public Task<CvTranslation> TranslateAsync(CvDocument cv, CancellationToken ct)
+    {
+        Check();
+        TranslateCalls++;
+        return Task.FromResult(new CvTranslation(cv with { Headline = "EN: " + cv.Headline }, ["no-traducido:1"]));
     }
 }
 

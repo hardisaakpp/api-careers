@@ -35,7 +35,7 @@ public sealed class ApplicationService(
             return (existing.Id, false);
         }
 
-        var cv = await cvs.GetAsync(userId, ct) ?? throw new ConflictException("cv-missing", "Save your CV first.");
+        var cv = await cvs.GetAsync(userId, CvLanguages.Spanish, ct) ?? throw new ConflictException("cv-missing", "Save your CV first.");
         var tailored = await ai.AdaptAsync(cv, offer, ct);
         var letter = await ai.LetterAsync(tailored, offer, ct);
         var application = JobApplication.Prepare(
@@ -114,7 +114,7 @@ public sealed class ApplicationService(
         var application = await Own(userId, id, ct);
         var cv = JsonSerializer.Deserialize<CvDocument>(application.TailoredCvJson, CareersJson.Options)
                  ?? throw new NotFoundException();
-        return await ai.RenderPdfAsync(cv, ct);
+        return await ai.RenderPdfAsync(cv, CvLanguages.Spanish, ct);
     }
 
     /// <summary>Someone else's application is indistinguishable from one that does not exist.</summary>

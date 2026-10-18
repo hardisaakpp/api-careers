@@ -55,7 +55,7 @@ public sealed record CvContact(string Email, IReadOnlyDictionary<string, string>
 public sealed record CvExperience(
     string Role, string Organization, string From,
     IReadOnlyList<string> Achievements, IReadOnlyList<string> Technologies, string? To = null,
-    string? Location = null, bool Include = true);
+    string? Location = null, bool Include = true, string? Project = null);
 
 public sealed record CvProject(string Name, string Description, IReadOnlyList<string> Technologies, string? Url = null, bool Include = true);
 

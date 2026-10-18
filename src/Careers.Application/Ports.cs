@@ -6,9 +6,10 @@ namespace Careers.Application;
 
 public interface ICvRepository
 {
-    Task<CvDocument?> GetAsync(Guid userId, CancellationToken ct);
+    /// <summary>The person's CV in <paramref name="language"/> (<see cref="CvLanguages"/>): each language is its own document.</summary>
+    Task<CvDocument?> GetAsync(Guid userId, string language, CancellationToken ct);
 
-    Task SaveAsync(Guid userId, CvDocument cv, CancellationToken ct);
+    Task SaveAsync(Guid userId, string language, CvDocument cv, CancellationToken ct);
 }
 
 public interface IPreferencesRepository
@@ -75,11 +76,18 @@ public interface ICareersAi
 
     Task<string> LetterAsync(CvDocument cv, JobOffer offer, CancellationToken ct);
 
-    Task<byte[]> RenderPdfAsync(CvDocument cv, CancellationToken ct);
+    /// <summary>The PDF of a CV, with the section titles and "present" in <paramref name="language"/> (<see cref="CvLanguages"/>).</summary>
+    Task<byte[]> RenderPdfAsync(CvDocument cv, string language, CancellationToken ct);
+
+    /// <summary>An English draft of a Spanish CV. Nothing is stored: the person reviews and edits it first.</summary>
+    Task<CvTranslation> TranslateAsync(CvDocument cv, CancellationToken ct);
 
     /// <summary>Reads an existing CV (PDF, DOCX or a LinkedIn data export) into a draft. Nothing is stored.</summary>
     Task<CvImport> ImportAsync(byte[] file, CancellationToken ct);
 }
+
+/// <summary>A translated draft: <see cref="Warnings"/> are stable codes the interface words (e.g. no-traducido:2).</summary>
+public sealed record CvTranslation(CvDocument Cv, IReadOnlyList<string> Warnings);
 
 /// <summary>A draft read from a file: <see cref="Source"/> is pdf, docx or linkedin; <see cref="Warnings"/> are stable codes the interface words.</summary>
 public sealed record CvImport(CvDocument Cv, string Source, IReadOnlyList<string> Warnings);

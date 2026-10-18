@@ -11,20 +11,28 @@ public static class CvEndpoints
 
     public static void MapCvEndpoints(this IEndpointRouteBuilder app)
     {
-        app.MapGet("/cv", async (HttpContext http, CvService cvs, CancellationToken ct) =>
+        // `?lang=` picks the version of the CV (es, the default, or en): each is stored, edited and rendered on its own.
+        app.MapGet("/cv", async (HttpContext http, CvService cvs, CancellationToken ct, string lang = CvLanguages.Spanish) =>
         {
-            var (cv, saved) = await cvs.GetAsync(http.User.UserId(), ct);
+            var (cv, saved) = await cvs.GetAsync(http.User.UserId(), lang, ct);
             return Results.Ok(new { cv, saved });
         });
 
-        app.MapPut("/cv", async (HttpContext http, CvDocument cv, CvService cvs, CancellationToken ct) =>
+        app.MapPut("/cv", async (HttpContext http, CvDocument cv, CvService cvs, CancellationToken ct, string lang = CvLanguages.Spanish) =>
         {
-            await cvs.SaveAsync(http.User.UserId(), cv, ct);
+            await cvs.SaveAsync(http.User.UserId(), lang, cv, ct);
             return Results.NoContent();
         });
 
+        // An English draft of the saved Spanish CV: nothing is stored, the person edits it and saves it with PUT /cv?lang=en.
+        app.MapPost("/cv/translate", async (HttpContext http, CvService cvs, CancellationToken ct) =>
+        {
+            var translated = await cvs.TranslateAsync(http.User.UserId(), ct);
+            return Results.Ok(new { cv = translated.Cv, warnings = translated.Warnings });
+        }).RequireRateLimiting(HeavyPolicy);
+
         // Compiles a PDF: the draft in the body (nothing is stored) or, with no body, the saved CV.
-        app.MapPost("/cv/pdf", async (HttpContext http, CvService cvs, CancellationToken ct) =>
+        app.MapPost("/cv/pdf", async (HttpContext http, CvService cvs, CancellationToken ct, string lang = CvLanguages.Spanish) =>
         {
             CvDocument? draft = null;
             if (http.Request.ContentLength is > 0)
@@ -32,7 +40,7 @@ public static class CvEndpoints
                 draft = await http.Request.ReadFromJsonAsync<CvDocument>(Careers.Application.CareersJson.Options, ct);
             }
 
-            return Results.File(await cvs.RenderAsync(http.User.UserId(), draft, ct), "application/pdf");
+            return Results.File(await cvs.RenderAsync(http.User.UserId(), lang, draft, ct), "application/pdf");
         }).RequireRateLimiting(HeavyPolicy);
 
         // Reads an existing CV (PDF, DOCX or a LinkedIn data export) into a draft. The file travels raw in the body.

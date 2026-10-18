@@ -130,7 +130,7 @@ public class OfferEndpointsTests : IClassFixture<CareersApiFactory>, IAsyncLifet
         Assert.True(top.GetProperty("score").GetDouble() > offers.First(o => o.GetProperty("title").GetString() == meh).GetProperty("score").GetDouble());
         Assert.Equal(".NET", top.GetProperty("matches")[0].GetString());
         // The experience an offer asks for comes with it, and is null when the offer does not say.
-        Assert.Equal(System.Text.Json.JsonValueKind.Null, top.GetProperty("requiredYears").ValueKind);
+        Assert.Equal(JsonValueKind.Null, top.GetProperty("requiredYears").ValueKind);
         Assert.Equal(5, offers.First(o => o.GetProperty("title").GetString() == senior).GetProperty("requiredYears").GetInt32());
         Assert.StartsWith("https://alpha.example/", top.GetProperty("url").GetString());
 

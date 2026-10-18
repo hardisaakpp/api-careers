@@ -23,7 +23,7 @@ public sealed class RankingService(
 
     public async Task<OfferRanking> RankAsync(Guid userId, int limit, CancellationToken ct)
     {
-        var cv = await cvs.GetAsync(userId, ct) ?? throw new ConflictException("cv-missing", "Save your CV first.");
+        var cv = await cvs.GetAsync(userId, CvLanguages.Spanish, ct) ?? throw new ConflictException("cv-missing", "Save your CV first.");
         var prefs = await preferences.GetAsync(userId, ct) ?? SearchPreferences.None;
         var known = await offers.RecentAsync(MaxOffers, ct);
         if (known.Count == 0)

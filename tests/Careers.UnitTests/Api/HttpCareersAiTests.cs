@@ -51,13 +51,29 @@ public class HttpCareersAiTests
             Hidden = ["proyectos"],
         };
 
-        await Client(handler).RenderPdfAsync(cv, default);
+        await Client(handler).RenderPdfAsync(cv, "en", default);
 
         using var sent = JsonDocument.Parse(handler.Calls[0].Body);
         var sentCv = sent.RootElement.GetProperty("cv");
         Assert.Equal("English", sentCv.GetProperty("idiomas")[0].GetProperty("nombre").GetString());
         Assert.False(sentCv.GetProperty("idiomas")[0].GetProperty("incluir").GetBoolean());
         Assert.Equal("proyectos", sentCv.GetProperty("ocultas")[0].GetString());
+        Assert.Equal("en", sent.RootElement.GetProperty("idioma").GetString());
+    }
+
+    [Fact]
+    public async Task Translate_sends_the_cv_and_brings_back_the_draft_with_its_warnings()
+    {
+        var handler = new Handler(_ => Json("""
+        {"cv":{"nombre":"Ana","titular":"Developer","resumen":"R","contacto":{"email":"a@b.co","telefono":null,"ubicacion":null,"enlaces":{}},
+         "experiencia":[],"proyectos":[],"educacion":[],"habilidades":[]},"avisos":["no-traducido:2"]}
+        """));
+
+        var result = await Client(handler).TranslateAsync(CareersApiFactory.SampleCv(), default);
+
+        Assert.Equal("v1/translate", handler.Calls[0].Request.RequestUri!.AbsolutePath.Trim('/'));
+        Assert.Equal("Developer", result.Cv.Headline);
+        Assert.Equal(["no-traducido:2"], result.Warnings);
     }
 
     [Fact]
@@ -145,7 +161,7 @@ public class HttpCareersAiTests
     {
         var handler = new Handler(_ => new HttpResponseMessage(status));
 
-        await Assert.ThrowsAsync<AiUnavailableException>(() => Client(handler).RenderPdfAsync(CareersApiFactory.SampleCv(), default));
+        await Assert.ThrowsAsync<AiUnavailableException>(() => Client(handler).RenderPdfAsync(CareersApiFactory.SampleCv(), "es", default));
     }
 
     [Fact]

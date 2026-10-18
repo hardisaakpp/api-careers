@@ -36,10 +36,16 @@ public sealed class HttpCareersAi(HttpClient http, ILogger<HttpCareersAi> logger
     public async Task<string> LetterAsync(CvDocument cv, JobOffer offer, CancellationToken ct) =>
         (await PostAsync<AiLetterResponse>("v1/letter", new AiOfferRequest(AiMapper.ToAi(cv), AiMapper.ToAi(offer)), ct)).Letter;
 
-    public async Task<byte[]> RenderPdfAsync(CvDocument cv, CancellationToken ct)
+    public async Task<byte[]> RenderPdfAsync(CvDocument cv, string language, CancellationToken ct)
     {
-        using var response = await SendAsync("v1/render", new AiRenderRequest(AiMapper.ToAi(cv)), ct);
+        using var response = await SendAsync("v1/render", new AiRenderRequest(AiMapper.ToAi(cv), language), ct);
         return await response.Content.ReadAsByteArrayAsync(ct);
+    }
+
+    public async Task<CvTranslation> TranslateAsync(CvDocument cv, CancellationToken ct)
+    {
+        var response = await PostAsync<AiTranslateResponse>("v1/translate", new AiTranslateRequest(AiMapper.ToAi(cv)), ct);
+        return new CvTranslation(AiMapper.FromAi(response.Cv), response.Warnings ?? []);
     }
 
     public async Task<CvImport> ImportAsync(byte[] file, CancellationToken ct)

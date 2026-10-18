@@ -9,19 +9,19 @@ namespace Careers.Infrastructure.Persistence;
 
 public sealed class EfCvRepository(CareersDbContext db, TimeProvider clock) : ICvRepository
 {
-    public async Task<CvDocument?> GetAsync(Guid userId, CancellationToken ct)
+    public async Task<CvDocument?> GetAsync(Guid userId, string language, CancellationToken ct)
     {
-        var row = await db.Cvs.AsNoTracking().SingleOrDefaultAsync(r => r.UserId == userId, ct);
+        var row = await db.Cvs.AsNoTracking().SingleOrDefaultAsync(r => r.UserId == userId && r.Language == language, ct);
         return row is null ? null : JsonSerializer.Deserialize<CvDocument>(row.Json, CareersJson.Options);
     }
 
-    public async Task SaveAsync(Guid userId, CvDocument cv, CancellationToken ct)
+    public async Task SaveAsync(Guid userId, string language, CvDocument cv, CancellationToken ct)
     {
         var json = JsonSerializer.Serialize(cv, CareersJson.Options);
-        var row = await db.Cvs.SingleOrDefaultAsync(r => r.UserId == userId, ct);
+        var row = await db.Cvs.SingleOrDefaultAsync(r => r.UserId == userId && r.Language == language, ct);
         if (row is null)
         {
-            db.Cvs.Add(new CvRow { UserId = userId, Json = json, UpdatedAt = clock.GetUtcNow() });
+            db.Cvs.Add(new CvRow { UserId = userId, Language = language, Json = json, UpdatedAt = clock.GetUtcNow() });
         }
         else
         {

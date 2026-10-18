@@ -142,8 +142,13 @@ namespace Careers.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("Careers.Infrastructure.Persistence.CvRow", b =>
                 {
                     b.Property<Guid>("UserId")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Language")
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(5)
+                        .HasColumnType("nvarchar(5)")
+                        .HasDefaultValue("es");
 
                     b.Property<string>("Json")
                         .IsRequired()
@@ -152,7 +157,7 @@ namespace Careers.Infrastructure.Persistence.Migrations
                     b.Property<long>("UpdatedAt")
                         .HasColumnType("bigint");
 
-                    b.HasKey("UserId");
+                    b.HasKey("UserId", "Language");
 
                     b.ToTable("cvs", (string)null);
                 });

@@ -18,7 +18,8 @@ internal sealed record AiExperience(
     [property: JsonPropertyName("logros")] IReadOnlyList<string> Achievements,
     [property: JsonPropertyName("tecnologias")] IReadOnlyList<string> Technologies,
     [property: JsonPropertyName("ubicacion")] string? Location = null,
-    [property: JsonPropertyName("incluir")] bool Include = true);
+    [property: JsonPropertyName("incluir")] bool Include = true,
+    [property: JsonPropertyName("proyecto")] string? Project = null);
 
 internal sealed record AiProject(
     [property: JsonPropertyName("nombre")] string Name,
@@ -106,7 +107,15 @@ internal sealed record AiOfferRequest(
     [property: JsonPropertyName("cv")] AiCv Cv,
     [property: JsonPropertyName("oferta")] AiOffer Offer);
 
-internal sealed record AiRenderRequest([property: JsonPropertyName("cv")] AiCv Cv);
+internal sealed record AiRenderRequest(
+    [property: JsonPropertyName("cv")] AiCv Cv,
+    [property: JsonPropertyName("idioma")] string Language);
+
+internal sealed record AiTranslateRequest([property: JsonPropertyName("cv")] AiCv Cv);
+
+internal sealed record AiTranslateResponse(
+    [property: JsonPropertyName("cv")] AiCv Cv,
+    [property: JsonPropertyName("avisos")] IReadOnlyList<string>? Warnings = null);
 
 internal sealed record AiAdaptResponse([property: JsonPropertyName("cv")] AiCv Cv);
 
